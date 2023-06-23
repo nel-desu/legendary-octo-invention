@@ -1,12 +1,15 @@
 // ==UserScript==
 // @name         FF14 签到
 // @namespace    http://tampermonkey.net/
-// @version      0.1
-// @description  屑脚本，在进入官网时，自动打开积分商城和竞猜中心
+// @version      0.2
+// @description  积分商场签到与竞猜中心签到，参考 https://nga.178.com/read.php?tid=36759387
 // @author       Nel
 // @match        *://*.sdo.com/*
 // @match        *://bbs.nga.cn/*
 // @match        *://nga.178.com/*
+// @match        *://ff14.huijiwiki.com/*
+// @match        *://*.ffxiv.cn/*
+// @icon         https://ff.web.sdo.com/favicon.ico
 // @grant        GM_registerMenuCommand
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -16,15 +19,35 @@
 (function() {
     'use strict';
 
-    GM_registerMenuCommand("每日签到", checkin, "a");
+    const ACCOUNT = "XXXXXX";
+    const HOST = window.location.host;
 
+    // 检查日期
     const date = GM_getValue("date", null);
     if (!date || date !== getToDay()) {
         checkin();
         GM_setValue("date", getToDay());
     }
 
-    console.log("脚本运行：" + window.location.host + " date: " + date);
+    // 登录页面，自动选中一键登录
+    if (HOST === "login.u.sdo.com") {
+        document.querySelector('#isAgreementAccept').click();
+        document.querySelector('#nav_btn_mobile').click();
+        document.querySelector('#username').value = ACCOUNT;
+    }
+    // 竞猜页面，添加一键领取按钮
+    if (HOST === "actff1.web.sdo.com") {
+        const newBtn = addButton();
+        setTimeout(() => newBtn.click(), 1000);
+    }
+    // 商城个人中心
+    if (HOST === "qu.sdo.com") {
+        const newBtn = addButton();
+        setTimeout(() => document.querySelector(".action-dom").click(), 1000);
+    }
+
+    // 在拓展上添加按钮
+    GM_registerMenuCommand("每日签到", checkin, "a");
 
     /* 给竞猜中心添加按钮 */
     function addButton() {
@@ -43,16 +66,18 @@
         const parent = btns[0].parentElement;
         parent.insertBefore(newBtn, btns[0]);
         parent.style = "width: 450px";
+        return newBtn;
     }
 
     /* 打开网页手动签到 */
     function checkin() {
-        window.open("https://qu.sdo.com/personal-center?merchantId=1#pointsindex-1");
-        window.open("https://actff1.web.sdo.com/20200908JingCai/index.html#/index");
-    }
-
-    if (window.location.host === "actff1.web.sdo.com") {
-        addButton();
+        const address = [
+            // 竞猜
+            "https://actff1.web.sdo.com/20200908JingCai/index.html#/index",
+            // 积分
+            "https://qu.sdo.com/personal-center?merchantId=1#pointsindex-1",
+        ];
+        address.forEach(v => window.open(v));
     }
 
     function getToDay() {
